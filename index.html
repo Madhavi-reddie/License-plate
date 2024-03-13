@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <title>License Plate Recognition</title>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto mt-8 p-8 bg-white rounded-md shadow-md">
+        <h1 class="text-2xl font-bold mb-4">License Plate Recognition</h1>
+
+        <!-- Whitelist Form -->
+        <form id="whitelistForm" class="mb-8">
+            <label for="whitelist" class="block text-sm font-medium text-gray-700">Whitelist</label>
+            <div class="mt-1 relative rounded-md shadow-sm flex">
+                <input type="text" id="whitelist" name="whitelist" class="form-input py-2 px-4 block w-full leading-5 rounded-md transition duration-150 ease-in-out sm:text-sm sm:leading-5" placeholder="Enter a plate number">
+                <button type="button" onclick="addToWhitelist()" class="ml-2 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-md cursor-pointer">Add</button>
+            </div>
+        </form>
+
+        <!-- Whitelist Display -->
+        <div>
+            <h2 class="text-lg font-semibold mb-2">Current Whitelist:</h2>
+            <ul id="whitelistDisplay" class="list-disc pl-6"></ul>
+        </div>
+
+        <!-- Image Upload -->
+        <form id="imageForm" class="mt-8" enctype="multipart/form-data">
+            <label for="image" class="block text-sm font-medium text-gray-700">Upload Image</label>
+            <input type="file" id="image" name="image" accept=".jpg, .jpeg, .png" class="form-input py-2 px-4 block w-full leading-5 rounded-md transition duration-150 ease-in-out sm:text-sm sm:leading-5">
+            <button type="button" onclick="recognizeLicensePlate()" class="mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md cursor-pointer">Recognize License Plate</button>
+        </form>
+
+        <!-- Result Display -->
+        <div id="resultDisplay" class="mt-8"></div>
+    </div>
+
+    <script>
+        let whitelist = [];
+
+        function addToWhitelist() {
+            const plateNumber = document.getElementById('whitelist').value.trim();
+            if (plateNumber !== '' && !whitelist.includes(plateNumber)) {
+                whitelist.push(plateNumber);
+                updateWhitelistDisplay();
+                document.getElementById('whitelist').value = '';
+            }
+        }
+
+        function removeFromWhitelist(plateNumber) {
+            whitelist = whitelist.filter(plate => plate !== plateNumber);
+            updateWhitelistDisplay();
+        }
+
+        function updateWhitelistDisplay() {
+            const whitelistDisplay = document.getElementById('whitelistDisplay');
+            whitelistDisplay.innerHTML = '';
+            whitelist.forEach((plateNumber) => {
+                const listItem = document.createElement('li');
+                listItem.textContent = plateNumber;
+
+                // Delete Button
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Delete';
+                deleteButton.className = 'ml-2 bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded-md cursor-pointer';
+                deleteButton.onclick = () => removeFromWhitelist(plateNumber);
+
+                listItem.appendChild(deleteButton);
+
+                whitelistDisplay.appendChild(listItem);
+            });
+        }
+
+        function recognizeLicensePlate() {
+            const imageInput = document.getElementById('image');
+            const imageFile = imageInput.files[0];
+
+            if (imageFile) {
+                const formData = new FormData();
+                formData.append('upload', imageFile);
+
+                // Display loading state
+                document.getElementById('resultDisplay').innerHTML = 'Recognizing...';
+
+                fetch('https://api.platerecognizer.com/v1/plate-reader/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Authorization': 'Token a8dfed6caef265edce7da0bd97c8bf3b040ef463'
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const plateNumber = data.results[0]?.plate ?? 'No plate detected';
+                    const resultDisplay = document.getElementById('resultDisplay');
+
+                    if (whitelist.includes(plateNumber)) {
+                        resultDisplay.innerHTML = `<p>Plate Number: ${plateNumber}</p><p>Allowed</p>`;
+                    } else {
+                        resultDisplay.innerHTML = `<p>Plate Number: ${plateNumber}</p><p>Not Allowed</p>`;
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            } else {
+                alert('Please select an image before recognizing the license plate.');
+            }
+        }
+    </script>
+</body>
+</html>
